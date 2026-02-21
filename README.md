@@ -1,234 +1,290 @@
-# Single Drone Flight Workspace
-
-This workspace contains a simplified ROS2 package for autonomously flying a single drone to 5 meters altitude using PX4 offboard control.
+# ROS 2 Drone Mission Assignment - Sarthak
 
 ## Overview
 
-The `single_drone_flight` package demonstrates basic autonomous flight capabilities:
-- Automatic arming sequence
-- Autonomous takeoff
-- Climbing to target altitude (5 meters)
-- Position holding at target altitude
+This repository contains custom drone missions developed as part of the APTCODER Technical Internship assignment. Three autonomous flight missions have been implemented using ROS 2 Humble and PX4 SITL.
 
-The package provides both **Python** and **C++** implementations of the flight controller, allowing you to choose based on your preference or requirements.
+---
 
-## Prerequisites
+## Missions Implemented
 
-Before running this package, ensure you have:
+### 1. Square Pattern Mission
+**File:** `src/single_drone_flight/controller/square_pattern_mission.py`
 
-1. **ROS2 Humble** installed
-2. **PX4 Autopilot** installed in `~/PX4-Autopilot`
-3. **MicroXRCE-DDS Agent** installed and available in PATH
-4. Required Python dependencies:
-   ```bash
-   pip3 install --user -U empy pyros-genmsg setuptools
-   pip3 install kconfiglib
-   pip install --user jsonschema
-   pip install --user jinja2
-   ```
+**Description:**
+The drone autonomously flies in a 10m × 10m square pattern at 5 meters altitude.
 
-## Installation
+**Flight Sequence:**
+1. Takeoff to 5m altitude
+2. Fly North 10m
+3. Fly East 10m 
+4. Fly South 10m
+5. Fly West 10m (return to start)
+6. Hover at home position
 
-1. Clone or create this workspace:
-   ```bash
-   cd /home/krish/flying_single_drone_ws
-   ```
+**Key Features:**
+- Waypoint-based navigation
+- Distance threshold detection (1.5m)
+- Real-time progress logging
 
-2. Source ROS2:
-   ```bash
-   source /opt/ros/humble/setup.bash
-   ```
+---
 
-3. Build the workspace:
-   ```bash
-   colcon build
-   ```
+### 2. Waypoint Navigation Mission
+**File:** `src/single_drone_flight/controller/waypoint_mission_v2.py`
 
-4. Source the workspace:
-   ```bash
-   source install/setup.bash
-   ```
+**Description:**
+Advanced mission that visits 5 different waypoints with varying altitudes.
 
-## Usage
+**Flight Sequence:**
+1. Takeoff and arm
+2. Visit Point Alpha (15m North, 5m altitude)
+3. Visit Point Bravo (15m North, 15m East, 7m altitude)
+4. Visit Point Charlie (15m East, 5m altitude)
+5. Visit Point Delta (-10m North, 10m East, 8m altitude - highest)
+6. Visit Point Echo (-10m North, -10m East, 5m altitude)
+7. Return Home (0, 0, 5m altitude)
 
-### Method 1: Using Launch Files (Recommended)
+**Key Features:**
+- State machine architecture (IDLE → ARMING → TAKEOFF → CLIMBING → WAYPOINT_NAVIGATION → HOVERING)
+- Dynamic altitude changes
+- 3D distance calculation for waypoint verification
 
-#### Python Controller (Default)
-Run the complete system with Python controller:
+---
+
+### 3. Landing Mission
+**File:** `src/single_drone_flight/controller/landing_mission.py`
+
+**Description:**
+Complete flight cycle demonstrating safe takeoff, hover, and autonomous landing.
+
+**Flight Sequence:**
+1. Arm and takeoff to 5m altitude
+2. Hover for 10 seconds
+3. Execute automatic landing sequence
+4. Safe touchdown
+
+**Key Features:**
+- Timer-based hover duration
+- Automatic landing command
+- Ground proximity detection
+
+---
+
+##  Repository Structure
+```
+swarm_drone/
+├── src/
+│   └── single_drone_flight/
+│       ├── controller/
+│       │   ├── single_drone_control.py       # Base mission (original)
+│       │   ├── square_pattern_mission.py     # Mission 1
+│       │   ├── waypoint_mission_v2.py        # Mission 2
+│       │   ├── landing_mission.py            # Mission 3
+│       │   └── simulation_launcher.py        # Simulation helper
+│       ├── launch/
+│       │   └── single_drone_flight.launch.py
+│       ├── CMakeLists.txt
+│       └── package.xml
+├── README.md                                  # This file
+└── RESOURCES_USED.md                          # External sources documentation
+```
+
+---
+
+##System Requirements
+
+- **OS:** Ubuntu 22.04 (or WSL2 on Windows)
+- **ROS 2:** Humble
+- **PX4:** Main branch
+- **Gazebo:** Classic 11.10.2
+- **Python:** 3.10+
+
+---
+
+## 📦 Installation & Setup
+
+### 1. Install Dependencies
 ```bash
-ros2 launch single_drone_flight single_drone_flight.launch.py
+# Install ROS 2 Humble
+sudo apt update
+sudo apt install ros-humble-desktop
+
+# Install Gazebo Classic
+sudo apt install gazebo
+
+# Install Python dependencies
+pip3 install --user empy pyros-genmsg setuptools kconfiglib jsonschema jinja2
 ```
 
-#### C++ Controller
-Run the complete system with C++ controller:
+# 2. Install PX4 Autopilot
 ```bash
-ros2 launch single_drone_flight single_drone_flight_cpp.launch.py
+cd ~
+git clone https://github.com/PX4/PX4-Autopilot.git --recursive
+cd PX4-Autopilot
+bash ./Tools/setup/ubuntu.sh
+make px4_sitl gazebo-classic
 ```
 
-Both launch files will:
-1. Start the simulation components (MicroXRCE-DDS Agent and PX4 SITL)
-2. Wait 30 seconds for startup and stabilization
-3. Launch the respective flight control implementation
-
-### Method 2: Manual Step-by-Step
-
-#### For Python Controller
-
-1. **Start Simulation Components:**
-   ```bash
-   ros2 run single_drone_flight simulation_launcher
-   ```
-
-2. **Wait for PX4 to boot** (look for "Ready for takeoff!" message in PX4 terminal)
-
-3. **Start Python Flight Control:**
-   ```bash
-   ros2 run single_drone_flight single_drone_control
-   ```
-
-#### For C++ Controller
-
-1. **Start Simulation Components:**
-   ```bash
-   ros2 run single_drone_flight simulation_launcher
-   ```
-
-2. **Wait for PX4 to boot** (look for "Ready for takeoff!" message in PX4 terminal)
-
-3. **Start C++ Flight Control:**
-   ```bash
-   ros2 run single_drone_flight single_drone_control_cpp
-   ```
-
-## Package Contents
-
-- **`single_drone_control.py`**: Python implementation of autonomous flight control node
-- **`single_drone_control_cpp`**: C++ implementation of autonomous flight control node
-- **`simulation_launcher.py`**: Launches PX4 SITL and MicroXRCE-DDS Agent
-- **`single_drone_flight.launch.py`**: Coordinated launch file for Python controller
-- **`single_drone_flight_cpp.launch.py`**: Coordinated launch file for C++ controller
-
-## Flight Behavior
-
-The drone will automatically execute this sequence:
-
-1. **IDLE**: Wait for flight checks to pass
-2. **ARMING**: Send arm commands until vehicle is armed
-3. **TAKEOFF**: Send takeoff command and wait for takeoff state
-4. **CLIMBING**: Wait for loiter state, then switch to offboard mode
-5. **REACHING_TARGET**: Use position control to reach exact 5m altitude
-6. **HOVERING**: Maintain position at target altitude
-
-## Safety Features
-
-- Continuous monitoring of flight checks
-- Automatic return to IDLE state if safety conditions fail
-- Failsafe detection and handling
-- Arming state monitoring
-
-## Coordinate Frames
-
-The system uses PX4's NED (North-East-Down) coordinate frame:
-- Positive X: North
-- Positive Y: East
-- Positive Z: Down (so -5.0 means 5 meters above ground)
-
-## Monitoring
-
-The flight control node provides detailed logging of:
-- State transitions
-- Vehicle status changes
-- Current altitude
-- Safety condition checks
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-1. **"Vertical velocity unstable" and "velocity estimate error"**
-   - **Cause**: PX4 needs time to stabilize its velocity estimation after startup
-   - **Solution**: Wait 30-60 seconds after PX4 starts before running flight control
-   - **Quick Fix**: Use the provided fix script: `./fix_drone_issues.sh`
-
-2. **Rapid state transitions between IDLE and ARMING**
-   - **Cause**: Improved safety checks in the flight control logic
-   - **Solution**: The updated code now includes proper timing delays and less frequent command sending
-
-3. **Simulation doesn't start**: Check that PX4-Autopilot is installed in `~/PX4-Autopilot`
-
-4. **MicroXRCE-DDS Agent not found**: Make sure it's installed and in PATH
-
-5. **Drone doesn't arm**: 
-   - Check PX4 terminal for error messages
-   - Ensure simulation has been running for at least 30 seconds
-   - Look for "Ready for takeoff!" message in PX4 terminal
-
-6. **Flight checks fail**: Ensure simulation is fully loaded before starting flight control
-
-### Quick Fix Script
-
-If you're experiencing the velocity estimation errors, run:
+# 3. Install MicroXRCE-DDS Agent
 ```bash
-./fix_drone_issues.sh
+cd ~
+git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
+cd Micro-XRCE-DDS-Agent
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig /usr/local/lib/
 ```
 
-This script will:
-- Clean up any existing processes
-- Start fresh simulation components
-- Wait for PX4 to stabilize
-- Provide guidance for next steps
-
-### Manual Step-by-Step Troubleshooting
-
-1. **Kill any existing processes:**
-   ```bash
-   pkill -f px4
-   pkill -f gazebo
-   pkill -f MicroXRCE
-   ```
-
-2. **Start MicroXRCE-DDS Agent:**
-   ```bash
-   MicroXRCEAgent udp4 -p 8888
-   ```
-
-3. **Start PX4 SITL (in another terminal):**
-   ```bash
-   cd ~/PX4-Autopilot
-   make px4_sitl gazebo-classic_iris
-   ```
-
-4. **Wait for "Ready for takeoff!" message in PX4 terminal**
-
-5. **Wait additional 30 seconds for velocity estimation to stabilize**
-
-6. **Run flight control:**
-   ```bash
-   cd /home/krish/flying_single_drone_ws
-   source install/setup.bash
-   
-   # For Python controller:
-   ros2 run single_drone_flight single_drone_control
-   
-   # OR for C++ controller:
-   ros2 run single_drone_flight single_drone_control_cpp
-   ```
-
-## Customization
-
-### Python Controller
-To modify the target altitude, edit the `target_altitude` variable in `single_drone_control.py`:
-```python
-self.target_altitude = -5.0  # Change this value (negative for up in NED frame)
+# 4. Clone and Build Workspace
+```bash
+cd ~/ros2_drone_workspace/swarm_drone
+source /opt/ros/humble/setup.bash
+colcon build
+source install/setup.bash
 ```
 
-### C++ Controller
-To modify the target altitude, edit the `target_altitude_` variable in `SingleDroneControl.cpp`:
-```cpp
-target_altitude_ = -5.0f;  // Change this value (negative for up in NED frame)
+---
+
+# Running the Missions
+
+# Terminal 1: Start PX4 SITL
+```bash
+cd ~/PX4-Autopilot
+make px4_sitl gazebo-classic
+```
+*Wait for "Ready for takeoff!" message + 60 seconds for stabilization*
+
+# Terminal 2: Start MicroXRCE-DDS Agent
+```bash
+MicroXRCEAgent udp4 -p 8888
 ```
 
-## Based On
+# Terminal 3: Run a Mission
 
-This package is simplified from the excellent ROS2_PX4_Offboard_Example by ARK Electronics:
-https://github.com/ARK-Electronics/ROS2_PX4_Offboard_Example
+**Square Pattern:**
+```bash
+cd ~/ros2_drone_workspace/swarm_drone
+source install/setup.bash
+ros2 run single_drone_flight square_pattern_mission.py
+```
+
+**Waypoint Navigation:**
+```bash
+ros2 run single_drone_flight waypoint_mission_v2.py
+```
+
+**Landing Mission:**
+```bash
+ros2 run single_drone_flight landing_mission.py
+```
+
+---
+
+## Demo Videos
+
+*Demo videos are included in the repository showing each mission in action:*
+
+- `demos/square_pattern_demo.mp4` (or .gif)
+- `demos/waypoint_mission_demo.mp4` (or .gif)
+- `demos/landing_mission_demo.mp4` (or .gif)
+
+---
+
+# Technical Details
+
+# Coordinate System
+All missions use PX4's NED (North-East-Down) coordinate frame:
+- **X:** North (positive forward)
+- **Y:** East (positive right)
+- **Z:** Down (negative = altitude)
+
+# Communication Architecture
+```
+ROS 2 Node ←→ MicroXRCE-DDS Agent ←→ PX4 SITL ←→ Gazebo
+```
+
+# Key Topics Used
+- `/fmu/in/offboard_control_mode` - Offboard control mode commands
+- `/fmu/in/trajectory_setpoint` - Position setpoints
+- `/fmu/in/vehicle_command` - Vehicle commands (arm, takeoff, land)
+- `/fmu/out/vehicle_status_v2` - Vehicle status feedback
+- `/fmu/out/vehicle_local_position_v1` - Position feedback
+
+---
+
+# Troubleshooting
+
+# Issue: Drone doesn't take off
+**Solution:** Ensure 60-second wait after "Ready for takeoff!" for velocity estimator to stabilize.
+
+# Issue: "Battery unhealthy" error
+**Solution:** Clean PX4 build:
+```bash
+cd ~/PX4-Autopilot
+rm -rf build/px4_sitl_default/tmp/
+make clean
+make px4_sitl gazebo-classic
+```
+
+# Issue: No topics visible
+**Solution:** Verify MicroXRCE-DDS Agent is running and connected:
+```bash
+ros2 topic list | grep fmu
+```
+
+---
+
+# External Resources
+
+All external resources, tutorials, and AI assistance used in this project are documented in `RESOURCES_USED.md`.
+
+---
+
+# Assignment Compliance
+
+# Base Task Requirements 
+-  Understood existing codebase
+-  Created 3 new missions (square, waypoints, landing)
+-  Maintained original code structure
+-  Used same base logic patterns
+-  Single launch file compatible
+
+# Code Quality 
+-  Clean, modular code
+-  Consistent naming conventions
+-  Proper state machine implementation
+-  Comprehensive logging
+
+# Documentation 
+-  All external sources cited
+-  Clear README with usage instructions
+-  Demo videos included
+-  Detailed PR description
+
+---
+
+# Author
+
+**[SARTHAK AGRAWAL]** 
+Technical Intern - ROS Drone Swarm Simulation & Control Branch
+APTCODER
+
+---
+
+## License
+
+This project extends the base codebase provided by APTCODER for the technical internship assignment.
+
+---
+
+## Acknowledgments
+
+- APTCODER for the internship opportunity
+- PX4 Development Team for excellent documentation
+- ROS 2 Community for robust tools and libraries
+- ChatGPT for development assistance
+
+
+*Last Updated: February 21, 2026*
