@@ -48,7 +48,7 @@ class SingleDroneControl(Node):
         # Create subscriptions
         self.status_sub = self.create_subscription(
             VehicleStatus,
-            '/fmu/out/vehicle_status',
+            '/fmu/out/vehicle_status_v2',
             self.vehicle_status_callback,
             qos_profile)
         
@@ -60,7 +60,7 @@ class SingleDroneControl(Node):
             
         self.local_position_sub = self.create_subscription(
             VehicleLocalPosition,
-            '/fmu/out/vehicle_local_position',
+            '/fmu/out/vehicle_local_position_v1',
             self.local_position_callback,
             qos_profile)
 
@@ -84,7 +84,7 @@ class SingleDroneControl(Node):
         # Initialize state variables
         self.current_state = "IDLE"
         self.last_state = "IDLE"
-        self.target_altitude = -5.0  # NED frame: negative Z is up
+        self.target_altitude = -8.0  # NED frame: negative Z is up
         self.altitude_tolerance = 0.2  # meters
         self.climb_velocity = 1.0  # m/s
         
@@ -95,7 +95,7 @@ class SingleDroneControl(Node):
         
         # Vehicle status variables
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
-        self.arm_state = VehicleStatus.ARMING_STATE_DISARMED
+        self.arm_state = 1
         self.failsafe = False
         self.flight_check = False
         self.offboard_mode = False
@@ -168,7 +168,7 @@ class SingleDroneControl(Node):
 
     def takeoff(self, altitude=5.0):
         """Send takeoff command"""
-        self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_NAV_TAKEOFF, param1=1.0, param7=altitude)
+        self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_NAV_TAKEOFF, param7=8.0)
         self.get_logger().info(f"Takeoff command sent - altitude: {altitude}m")
 
     def set_offboard_mode(self):
@@ -205,7 +205,7 @@ class SingleDroneControl(Node):
             if not self.flight_check:
                 self.current_state = "IDLE"
                 self.get_logger().warn("Flight check failed during arming")
-            elif self.arm_state == VehicleStatus.ARMING_STATE_ARMED and self.counter > 10:
+            elif self.arm_state == 2 and self.counter > 10:
                 self.current_state = "TAKEOFF"
                 # Store takeoff position for reference
                 self.takeoff_position = self.current_position
@@ -231,7 +231,7 @@ class SingleDroneControl(Node):
 
         elif self.current_state == "CLIMBING":
             # Wait for loiter state, then switch to offboard
-            if not self.flight_check or self.arm_state != VehicleStatus.ARMING_STATE_ARMED or self.failsafe:
+            if not self.flight_check or self.arm_state != 2 or self.failsafe:
                 self.current_state = "IDLE"
                 self.get_logger().warn("Safety condition failed during climb")
             elif self.nav_state == VehicleStatus.NAVIGATION_STATE_AUTO_LOITER:
@@ -245,7 +245,7 @@ class SingleDroneControl(Node):
 
         elif self.current_state == "REACHING_TARGET":
             # Use offboard control to reach exact target altitude
-            if not self.flight_check or self.arm_state != VehicleStatus.ARMING_STATE_ARMED or self.failsafe:
+            if not self.flight_check or self.arm_state != 2 or self.failsafe:
                 self.current_state = "IDLE"
                 self.get_logger().warn("Safety condition failed while reaching target")
             elif abs(self.current_altitude - self.target_altitude) < self.altitude_tolerance:
@@ -257,7 +257,7 @@ class SingleDroneControl(Node):
 
         elif self.current_state == "HOVERING":
             # Maintain position at target altitude
-            if not self.flight_check or self.arm_state != VehicleStatus.ARMING_STATE_ARMED or self.failsafe:
+            if not self.flight_check or self.arm_state != 2 or self.failsafe:
                 self.current_state = "IDLE"
                 self.get_logger().warn("Safety condition failed while hovering")
             else:
@@ -266,7 +266,7 @@ class SingleDroneControl(Node):
                     self.get_logger().info(f"Hovering at {-self.current_altitude:.2f}m altitude")
 
         # Only apply safety check if we're not already in IDLE and not in critical states
-        if (self.arm_state != VehicleStatus.ARMING_STATE_ARMED and 
+        if (self.arm_state != 2 and 
             self.current_state not in ["IDLE", "ARMING"] and
             self.counter > 20):  # Give some time for initial state transitions
             self.current_state = "IDLE"
